@@ -9,10 +9,11 @@ class NowPlayingWidget: BaseWidget {
     }
     
     private func setupMediaController() {
-        mediaController = AppleScriptMediaController()
+        // Use singleton to prevent multiple timers / AppleScript polling instances
+        mediaController = AppleScriptMediaController.shared
         mediaController?.delegate = self
-        mediaController?.requestPermissionsExplicitly()
-        mediaController?.startMonitoring()
+        // Do not call requestPermissionsExplicitly here (handled once at app startup)
+        mediaController?.startMonitoring() // safe (guarded internally)
     }
     
     override func createView() -> AnyView {
@@ -39,7 +40,7 @@ struct NowPlayingView: View {
     @ObservedObject var mediaController: AppleScriptMediaController
     @ObservedObject private var settings = UserSettings.shared
     init(mediaController: AppleScriptMediaController?) {
-        self.mediaController = mediaController ?? AppleScriptMediaController()
+        self.mediaController = mediaController ?? AppleScriptMediaController.shared
     }
     @State private var shouldRotate: Bool = false
     var body: some View {

@@ -20,10 +20,9 @@ class WidgetManager: ObservableObject {
     }
     
     private func setupMediaController() {
-        mediaController = AppleScriptMediaController()
+        mediaController = AppleScriptMediaController.shared
         mediaController?.delegate = self
-        mediaController?.startMonitoring()
-        //print("🎯 MediaController: Monitoring started")
+        mediaController?.startMonitoring() // guarded internally
     }
     
     
