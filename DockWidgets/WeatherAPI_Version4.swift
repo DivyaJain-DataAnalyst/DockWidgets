@@ -59,8 +59,8 @@ class WeatherAPI {
                 completion(.success(weatherData))
             } catch {
                 //print("❌ JSON decode error: \(error)")
-                if let jsonString = String(data: data, encoding: .utf8) {
-                    //print("📄 Raw JSON: \(jsonString)")
+                if let _ = String(data: data, encoding: .utf8) {
+                    // raw JSON available for debugging
                 }
                 completion(.failure(.decodingError(error)))
             }
