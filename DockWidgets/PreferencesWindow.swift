@@ -205,7 +205,7 @@ struct InfoTabView: View {
                                     Text("DockWidgets")
                                         .font(.title)
                                         .bold()
-                                    Text("Version 1.0")
+                                    Text("Version 2.0")
                                         .foregroundColor(.secondary)
                                 }
                             }
