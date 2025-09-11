@@ -69,7 +69,33 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
     
     private func requestPermissions() {
-        //print("🔐 Skipping location permissions. Defaulting to New Delhi.")
-        // No location permission or GPS tracking. Location is set to New Delhi by default.
+        // Check if accessibility permissions are already granted
+        let checkOptPrompt = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as NSString
+        let options = [checkOptPrompt: true]
+        let accessEnabled = AXIsProcessTrustedWithOptions(options as CFDictionary?)
+        
+        if !accessEnabled {
+            print("🔐 Accessibility permissions not granted - showing system dialog")
+            
+            // Show a user-friendly alert explaining why we need permissions
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                let alert = NSAlert()
+                alert.messageText = "Accessibility Permissions Required"
+                alert.informativeText = "DockWidgets needs accessibility permissions to detect when apps are in fullscreen mode so it can hide widgets appropriately.\n\nPlease enable DockWidgets in System Settings > Privacy & Security > Accessibility."
+                alert.alertStyle = .informational
+                alert.addButton(withTitle: "Open System Settings")
+                alert.addButton(withTitle: "Cancel")
+                
+                let response = alert.runModal()
+                if response == .alertFirstButtonReturn {
+                    // Open System Settings to Accessibility page
+                    if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility") {
+                        NSWorkspace.shared.open(url)
+                    }
+                }
+            }
+        } else {
+            print("✅ Accessibility permissions already granted")
+        }
     }
 }

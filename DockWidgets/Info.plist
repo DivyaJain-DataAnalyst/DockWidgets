@@ -27,6 +27,8 @@
     <string>This app needs location access to show weather information for your current location.</string>
     <key>NSAppleEventsUsageDescription</key>
     <string>Access to control media playback</string>
+    <key>NSAccessibilityUsageDescription</key>
+    <string>This app needs accessibility permissions to detect when other apps are in fullscreen mode so it can hide widgets appropriately.</string>
     
     <!-- Make it a backgroundapp (no dock icon)-->
     <key>LSUIElement</key>
