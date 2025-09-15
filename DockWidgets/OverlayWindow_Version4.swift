@@ -14,21 +14,22 @@ class OverlayWindow: NSWindow {
     // legacy counters (still usable for diagnostics)
     private var enterConsistency = 0
     private var exitConsistency = 0
-    private let sampleInterval: TimeInterval = 0.15 // Reduced for faster detection
+    // Update timing constants for better responsiveness and stability
+    private let sampleInterval: TimeInterval = 0.15 // Even faster detection
+    private let requiredExitStable: TimeInterval = 0.8 // Balanced exit timing
+    private let minEnterStable: TimeInterval = 0.1 // Very fast entry
+    private let spaceTransitionIgnore: TimeInterval = 0.3 // Reduced transition ignore
     private var resampleBurstWork: DispatchWorkItem?
     private var debugFS = true
     // Exit tracking (fast mode)
     private var firstExitCandidateAt: Date?
-    private let requiredExitStable: TimeInterval = 0.8 // reduced from 2.0
     private var lastMenuBarVisibleAt: Date?
     // Optimistic early show
     private let optimisticEarlyShow = false // Disabled to prevent premature showing
     private var optimisticShownAt: Date?
     // Space transition ignore & stable enter
     private var lastSpaceChangeAt: Date?
-    private let spaceTransitionIgnore: TimeInterval = 0.5 // Increased
     private var firstFullscreenCandidateAt: Date?
-    private let minEnterStable: TimeInterval = 0.15 // Kept fast for entry
     
     // Helper
     private func isInSpaceTransitionIgnore() -> Bool {
@@ -99,12 +100,12 @@ class OverlayWindow: NSWindow {
     private func processSnapshot(reason: String) {
         let snapshot = fullscreenSnapshotDetails()
         if debugFS {
-            print("[FS] reason=\(reason) isFS=\(snapshot.isFullscreen) enterStable=\(String(format: "%.2f", firstFullscreenCandidateAt.map{Date().timeIntervalSince($0)} ?? 0)) exitStable=\(String(format: "%.2f", firstExitCandidateAt.map{Date().timeIntervalSince($0)} ?? 0)) state=\(fsState) alpha=\(alphaValue) visible=\(isVisible)")
+            print("[FS] reason=\(reason) isFS=\(snapshot.isFullscreen) enterStable=\(String(format: "%.2f", firstFullscreenCandidateAt.map{Date().timeIntervalSince($0)} ?? 0)) exitStable=\(String(format: "%.2f", firstExitCandidateAt.map{Date().timeIntervalSince($0)} ?? 0)) state=\(fsState) alpha=\(alphaValue)")
         }
         
         switch fsState {
         case .normal:
-            // Simple fullscreen detection - only check for fullscreen windows
+            // Enhanced fullscreen detection - check for fullscreen windows or hidden menu bar
             if snapshot.isFullscreen && !isInSpaceTransitionIgnore() {
                 if firstFullscreenCandidateAt == nil {
                     firstFullscreenCandidateAt = Date()
@@ -122,13 +123,13 @@ class OverlayWindow: NSWindow {
             optimisticShownAt = nil
             
         case .fullscreen:
-            // Clean exit detection - only check for absence of fullscreen windows
+            // Enhanced exit detection - check for absence of fullscreen windows AND visible menu bar
             if !snapshot.isFullscreen && !isInSpaceTransitionIgnore() {
                 if firstExitCandidateAt == nil {
                     firstExitCandidateAt = Date()
                     if debugFS { print("[FS] Starting exit candidate timer") }
                 }
-                // Exit after stable period with no fullscreen windows
+                // Exit after stable period with confirmed non-fullscreen state
                 if Date().timeIntervalSince(firstExitCandidateAt!) >= requiredExitStable {
                     if debugFS { print("[FS] Transitioning to normal - no fullscreen windows detected") }
                     transitionToNormal()
@@ -138,9 +139,9 @@ class OverlayWindow: NSWindow {
                 if firstExitCandidateAt != nil && debugFS { print("[FS] Canceling exit candidate - fullscreen window detected") }
                 firstExitCandidateAt = nil
                 
-                // Re-hide if fullscreen window is present
-                if snapshot.isFullscreen && (alphaValue > 0 || isVisible) {
-                    if debugFS { print("[FS] Re-hiding - fullscreen window present") }
+                // AGGRESSIVE re-hiding if any fullscreen indicator is present
+                if snapshot.isFullscreen && (alphaValue > 0) {
+                    if debugFS { print("[FS] AGGRESSIVE re-hiding - fullscreen indicators present") }
                     hideForFullscreen()
                 }
             }
@@ -192,67 +193,57 @@ class OverlayWindow: NSWindow {
             return false
         }
         
-        // Get all windows from the frontmost application
-        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
-        guard let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] else {
-            if debugFS { print("[FS] Failed to get window list") }
-            return false
-        }
-        
         guard let screen = NSScreen.main else {
             if debugFS { print("[FS] No main screen found") }
             return false
         }
         
+        let appName = frontmostApp.localizedName ?? "Unknown"
+        
+        // Primary check: Menu bar visibility (most reliable indicator)
         let screenFrame = screen.frame
-        let pid = frontmostApp.processIdentifier
-        
-        // Look for fullscreen windows from the frontmost app
-        for windowInfo in windowList {
-            guard let windowPID = windowInfo[kCGWindowOwnerPID as String] as? Int32,
-                  windowPID == pid,
-                  let boundsDict = windowInfo[kCGWindowBounds as String] as? [String: Any],
-                  let x = boundsDict["X"] as? CGFloat,
-                  let y = boundsDict["Y"] as? CGFloat,
-                  let width = boundsDict["Width"] as? CGFloat,
-                  let height = boundsDict["Height"] as? CGFloat else {
-                continue
-            }
-            
-            let windowFrame = CGRect(x: x, y: y, width: width, height: height)
-            
-            // Check if window covers the entire screen (with small tolerance)
-            let tolerance: CGFloat = 5
-            if abs(windowFrame.origin.x - screenFrame.origin.x) <= tolerance &&
-               abs(windowFrame.origin.y - screenFrame.origin.y) <= tolerance &&
-               abs(windowFrame.width - screenFrame.width) <= tolerance &&
-               abs(windowFrame.height - screenFrame.height) <= tolerance {
-                
-                if debugFS {
-                    print("[FS] Fullscreen window detected for \(frontmostApp.localizedName ?? "Unknown")")
-                    print("[FS] Window frame: \(windowFrame)")
-                    print("[FS] Screen frame: \(screenFrame)")
-                }
-                return true
-            }
-        }
-        
-        // Fallback: Check if menu bar is completely hidden (much more strict than before)
         let visibleFrame = screen.visibleFrame
         let menuBarHeight = screenFrame.maxY - visibleFrame.maxY
-        let isMenuBarHidden = menuBarHeight < 2 // Much stricter threshold
         
-        if isMenuBarHidden {
+        // Very lenient menu bar check - if menu bar is significantly reduced
+        if menuBarHeight < 10 {
             if debugFS {
-                print("[FS] Menu bar completely hidden for \(frontmostApp.localizedName ?? "Unknown")")
-                print("[FS] Menu bar height: \(menuBarHeight)")
+                print("[FS] FULLSCREEN DETECTED via menu bar for \(appName) - menuBarHeight: \(menuBarHeight)")
             }
             return true
         }
         
+        // Secondary check: Simple window size detection without strict accessibility requirements
+        let options: CGWindowListOption = [.optionOnScreenOnly, .excludeDesktopElements]
+        if let windowList = CGWindowListCopyWindowInfo(options, kCGNullWindowID) as? [[String: Any]] {
+            let pid = frontmostApp.processIdentifier
+            
+            for windowInfo in windowList {
+                guard let windowPID = windowInfo[kCGWindowOwnerPID as String] as? Int32,
+                      windowPID == pid,
+                      let boundsDict = windowInfo[kCGWindowBounds as String] as? [String: Any],
+                      let width = boundsDict["Width"] as? CGFloat,
+                      let height = boundsDict["Height"] as? CGFloat else {
+                    continue
+                }
+                
+                // Very simple fullscreen detection - if window is close to screen size
+                let widthRatio = width / screenFrame.width
+                let heightRatio = height / screenFrame.height
+                
+                if widthRatio > 0.8 && heightRatio > 0.8 {
+                    if debugFS {
+                        print("[FS] FULLSCREEN DETECTED via large window for \(appName)")
+                        print("[FS] Window size: \(Int(width))x\(Int(height)), Screen: \(Int(screenFrame.width))x\(Int(screenFrame.height))")
+                        print("[FS] Coverage: \(Int(widthRatio*100))% x \(Int(heightRatio*100))%")
+                    }
+                    return true
+                }
+            }
+        }
+        
         if debugFS {
-            print("[FS] No fullscreen detected for \(frontmostApp.localizedName ?? "Unknown")")
-            print("[FS] Menu bar height: \(menuBarHeight)")
+            print("[FS] No fullscreen for \(appName) - menuBar: \(String(format: "%.1f", menuBarHeight))px")
         }
         
         return false
