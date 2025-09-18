@@ -44,7 +44,7 @@ Positive behaviors that help build a welcoming community:
 - 🌟 Focus on what benefits the **whole community**
 
 <p align="center">
-  <img src="https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExeTBhMDdseWtraWtmYWVzamx1eTg1M2FwZjdzNXJ2YjI5anIzdTAweCZlcD12MV9naWZzX3NlYXJjaCZjdD1n/ML15sUZFNyMy0Yv55m/giphy.gif" width="350" alt="Teamwork GIF">
+  <img src="https://media2.giphy.com/media/v1.Y2lkPTc5MGI3NjExNGpzZjJ6dHhjb2Zjc254bzhpcGI2NThhcnczcWVsejZvbnZxcTFnbSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/3oriO6qJiXajN0TyDu/giphy.gif" width="350" alt="Unacceptable Behavior Intro GIF">
 </p>
 
 <img src="https://user-images.githubusercontent.com/73097560/115834477-dbab4500-a447-11eb-908a-139a6edaec5c.gif" width="100%">
@@ -133,9 +133,9 @@ Consequences for violations:
 
 ## 📜 Attribution  
 
-This Code of Conduct is adapted from the [Contributor Covenant (v3.00)](https://www.contributor-covenant.org/version/3/0/code_of_conduct/), with modifications tailored for **DockWidgets under the GirlScript Summer of Code (GSSoC’25)**.  
+This Code of Conduct is adapted from the [Contributor Covenant (v3.0)](https://www.contributor-covenant.org/version/3/0/code_of_conduct/), with modifications tailored for **DockWidgets under the GirlScript Summer of Code (GSSoC’25)**.  
 
-📌 Original work licensed under [Creative Commons Attribution 4.0 International c 4.0](https://creativecommons.org/licenses/by/4.0/)  
+📌 Original work licensed under [Creative Commons Attribution 4.0 International](https://creativecommons.org/licenses/by/4.0/)  
 
 Enforcement guidelines inspired by [Mozilla’s code of conduct enforcement ladder](https://github.com/mozilla/diversity).  
 
